@@ -75,7 +75,7 @@ dt{font-weight:700}dd{margin:0;overflow-wrap:anywhere}
     <input id="qty" type="number" inputmode="numeric" min="1">
     <label for="ifs">IFS Bildirim No *</label>
     <input id="ifs" type="text" autocomplete="off">
-    <label for="mk">Kullanılacak Makina Kodu (Nesne ID) *</label>
+    <label for="mk">Kullanılacak Makina (Nesne ID) *</label>
     <input id="mk" type="text" autocomplete="off" autocapitalize="characters">
     <label for="user">Malzemeyi Kullanan (Ad Soyad) *</label>
     <input id="user" type="text" autocomplete="off" placeholder="Ara ve listeden seç">
@@ -339,7 +339,7 @@ $("send").onclick = () => {
   const note = $("note").value.trim().toLocaleUpperCase("tr");
   if (!(Number(qty) > 0)) return need("Çekilen Miktar", "qty");
   if (!ifs) return need("IFS Bildirim No", "ifs");
-  if (!mk) return need("Kullanılacak Makina Kodu", "mk");
+  if (!mk) return need("Kullanılacak Makina", "mk");
   if (!USERS.length) return say("Kişi listesi yüklenemedi. Sayfayı yenileyip tekrar deneyin.");
   if (!user) { say("Malzemeyi Kullanan için listeden bir isim seçin."); $("user").focus(); showUsers(); return; }
   say("");
@@ -352,7 +352,7 @@ $("send").onclick = () => {
     null,
     ["Çekilen Miktar", qty],
     ["IFS Bildirim No", ifs],
-    ["Kullanılacak Makina Kodu (Nesne ID)", mk],
+    ["Kullanılacak Makina (Nesne ID)", mk],
     ["Malzemeyi Kullanan", user]
   ];
   if (note) rows.push(["Ek Açıklama", note]);
