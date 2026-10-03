@@ -19,6 +19,7 @@ button.main{background:var(--acc);color:var(--accink);border:0;font-weight:600;c
 button:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
 #reader{width:100%;border-radius:10px;overflow:hidden}
 #reader:empty{display:none}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 #vid{width:100%;border-radius:10px;background:#000}
 #list{list-style:none;margin:0;padding:0;display:grid;gap:6px}
 #list button{text-align:left;cursor:pointer;display:grid;gap:2px}
@@ -60,9 +61,15 @@ dt{color:var(--mut)}dd{margin:0;font-weight:600;overflow-wrap:anywhere}
     <input id="qty" type="number" inputmode="numeric" min="1">
     <label for="note">Ek açıklama</label>
     <textarea id="note"></textarea>
-    <label for="photo">Parça resmi (isteğe bağlı)</label>
-    <input id="photo" type="file" accept="image/*">
+    <label>Parça resmi (isteğe bağlı)</label>
+    <div class="two">
+      <button type="button" id="pick">Dosya seç</button>
+      <button type="button" id="snap">Fotoğraf çek</button>
+    </div>
+    <input id="photo" type="file" accept="image/*" hidden>
+    <input id="photocam" type="file" accept="image/*" capture="environment" hidden>
     <img id="prev" alt="" hidden>
+    <button type="button" id="clear" hidden>Resmi kaldır</button>
     <button class="main" id="send">WhatsApp'a gönder</button>
   </section>
 </main>
@@ -221,11 +228,20 @@ $("shot").onchange = async e => {
   }
 };
 
-$("photo").onchange = e => {
+let photoFile = null;
+function setPhoto(f) {
+  photoFile = f || null;
+  $("prev").hidden = $("clear").hidden = !photoFile;
+  if (photoFile) $("prev").src = URL.createObjectURL(photoFile);
+}
+$("pick").onclick = () => $("photo").click();
+$("snap").onclick = () => $("photocam").click();
+$("clear").onclick = () => setPhoto(null);
+["photo", "photocam"].forEach(id => $(id).onchange = e => {
   const f = e.target.files[0];
-  $("prev").hidden = !f;
-  if (f) $("prev").src = URL.createObjectURL(f);
-};
+  e.target.value = "";
+  if (f) setPhoto(f);
+});
 
 $("send").onclick = async () => {
   if (!current) return;
@@ -243,7 +259,7 @@ $("send").onclick = async () => {
     note ? "Ek Açıklama: " + note : ""
   ].filter(Boolean).join("\n");
 
-  const file = $("photo").files[0];
+  const file = photoFile;
   try {
     if (file && navigator.canShare && navigator.canShare({files: [file]})) {
       await navigator.share({text, files: [file]});
