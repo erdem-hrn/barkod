@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Malzeme Bildirimi</title>
+<style>
+:root{--bg:#f3f5f4;--card:#fff;--ink:#16211d;--mut:#5b6b64;--line:#d5ddd9;--acc:#128c4a;--accink:#fff;--err:#b3261e}
+@media(prefers-color-scheme:dark){:root{--bg:#101614;--card:#19221e;--ink:#e9f0ed;--mut:#9bada5;--line:#2c3a34;--acc:#25b865;--accink:#06180e;--err:#ff8a80}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.4 system-ui,"Segoe UI",Roboto,sans-serif}
+main{max-width:520px;margin:0 auto;padding:16px;display:grid;gap:14px}
+h1{font-size:1.25rem;margin:4px 0 0}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;display:grid;gap:10px}
+label{font-size:.9rem;color:var(--mut)}
+input,textarea,button{font:inherit;width:100%;padding:12px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--ink)}
+textarea{min-height:70px;resize:vertical}
+button{background:var(--acc);color:var(--accink);border:0;font-weight:600;cursor:pointer}
+button.alt{background:transparent;color:var(--ink);border:1px solid var(--line)}
+button:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
+.row{display:flex;gap:8px}
+#reader{width:100%;border-radius:10px;overflow:hidden}
+#reader:empty{display:none}
+dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:6px 12px}
+dt{color:var(--mut)}dd{margin:0;font-weight:600;overflow-wrap:anywhere}
+#msg{color:var(--err);min-height:1.2em;margin:0}
+#prev{max-width:100%;border-radius:10px}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<main>
+  <h1>Malzeme Bildirimi</h1>
+
+  <section class="card">
+    <button id="scan">Barkod okut</button>
+    <div id="reader"></div>
+    <label for="code">Veya Malzeme No yaz</label>
+    <div class="row">
+      <input id="code" inputmode="numeric" autocomplete="off">
+      <button class="alt" id="find" style="width:auto">Bul</button>
+    </div>
+    <p id="msg" role="status"></p>
+  </section>
+
+  <section class="card" id="result" hidden>
+    <dl>
+      <dt>Malzeme No</dt><dd id="r-no"></dd>
+      <dt>Açıklama</dt><dd id="r-ac"></dd>
+      <dt>Eldeki Miktar</dt><dd id="r-mk"></dd>
+      <dt>Lokasyon No</dt><dd id="r-lk"></dd>
+      <dt>U/S/R No</dt><dd id="r-us"></dd>
+    </dl>
+    <label for="qty">Adet</label>
+    <input id="qty" type="number" inputmode="numeric" min="1">
+    <label for="note">Ek açıklama</label>
+    <textarea id="note"></textarea>
+    <label for="photo">Parça resmi (isteğe bağlı)</label>
+    <input id="photo" type="file" accept="image/*">
+    <img id="prev" alt="" hidden>
+    <button id="send">WhatsApp'a gönder</button>
+  </section>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+let DATA = {}, current = null, scanner = null;
+
+fetch("data.json").then(r => r.json()).then(d => DATA = d)
+  .catch(() => $("msg").textContent = "Malzeme listesi yüklenemedi. İnternet bağlantınızı kontrol edin.");
+
+const norm = s => String(s).trim().replace(/^0+/, "").toUpperCase();
+
+function lookup(raw) {
+  const code = String(raw).trim();
+  let key = DATA[code] ? code : Object.keys(DATA).find(k => norm(k) === norm(code));
+  if (!key) {
+    $("result").hidden = true; current = null;
+    $("msg").textContent = "Bulunamadı: " + code;
+    return;
+  }
+  const m = DATA[key];
+  current = {no: key, ...m};
+  $("msg").textContent = "";
+  $("r-no").textContent = key;
+  $("r-ac").textContent = m.aciklama;
+  $("r-mk").textContent = m.miktar;
+  $("r-lk").textContent = m.lokasyon;
+  $("r-us").textContent = m.usr;
+  $("result").hidden = false;
+  $("qty").focus();
+}
+
+async function stopScan() {
+  if (scanner) { try { await scanner.stop(); scanner.clear(); } catch (e) {} scanner = null; }
+  $("scan").textContent = "Barkod okut";
+}
+
+$("scan").onclick = async () => {
+  if (scanner) return stopScan();
+  scanner = new Html5Qrcode("reader");
+  $("scan").textContent = "Kamerayı kapat";
+  try {
+    await scanner.start({facingMode: "environment"}, {fps: 10, qrbox: {width: 260, height: 160}},
+      async text => { $("code").value = text; await stopScan(); lookup(text); });
+  } catch (e) {
+    scanner = null; $("scan").textContent = "Barkod okut";
+    $("msg").textContent = "Kamera açılamadı. Kamera iznini kontrol edin.";
+  }
+};
+
+$("find").onclick = () => $("code").value.trim() && lookup($("code").value);
+$("code").onkeydown = e => { if (e.key === "Enter") $("find").click(); };
+
+$("photo").onchange = e => {
+  const f = e.target.files[0];
+  $("prev").hidden = !f;
+  if (f) $("prev").src = URL.createObjectURL(f);
+};
+
+$("send").onclick = async () => {
+  if (!current) return;
+  const qty = $("qty").value.trim();
+  if (!qty) { $("msg").textContent = "Adet bilgisini yazın."; $("qty").focus(); return; }
+  $("msg").textContent = "";
+  const note = $("note").value.trim();
+  const text = [
+    "Malzeme No: " + current.no,
+    "Açıklama: " + current.aciklama,
+    "Eldeki Miktar: " + current.miktar,
+    "Lokasyon No: " + current.lokasyon,
+    "U/S/R No: " + current.usr,
+    "Adet: " + qty,
+    note ? "Ek Açıklama: " + note : ""
+  ].filter(Boolean).join("\n");
+
+  const file = $("photo").files[0];
+  try {
+    if (file && navigator.canShare && navigator.canShare({files: [file]})) {
+      await navigator.share({text, files: [file]});
+    } else if (navigator.share && !file) {
+      await navigator.share({text});
+    } else {
+      if (file) $("msg").textContent = "Bu cihaz resimli paylaşımı desteklemiyor, yalnızca metin gönderiliyor.";
+      window.open("https://wa.me/?text=" + encodeURIComponent(text), "_blank");
+    }
+  } catch (e) {
+    if (e.name !== "AbortError") $("msg").textContent = "Paylaşım açılamadı.";
+  }
+};
+</script>
+</body>
+</html>
