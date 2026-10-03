@@ -19,6 +19,9 @@ button.main{background:var(--acc);color:var(--accink);border:0;font-weight:600;c
 button:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
 #reader{width:100%;border-radius:10px;overflow:hidden}
 #reader:empty{display:none}
+#ulist{list-style:none;margin:0;padding:0;max-height:220px;overflow:auto;border:1px solid var(--line);border-radius:10px}
+#ulist li+li{border-top:1px solid var(--line)}
+#ulist button{border:0;border-radius:0;text-align:left;cursor:pointer}
 .two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 #vid{width:100%;border-radius:10px;background:#000}
 #list{list-style:none;margin:0;padding:0;display:grid;gap:6px}
@@ -59,6 +62,13 @@ dt{color:var(--mut)}dd{margin:0;font-weight:600;overflow-wrap:anywhere}
     </dl>
     <label for="qty">Adet</label>
     <input id="qty" type="number" inputmode="numeric" min="1">
+    <label for="ifs">IFS Bildirim No</label>
+    <input id="ifs" type="text" autocomplete="off">
+    <label for="mk">Kullanılacak Makina Kodu (Nesne ID)</label>
+    <input id="mk" type="text" autocomplete="off">
+    <label for="user">Malzemeyi Kullanan (Ad Soyad)</label>
+    <input id="user" type="text" autocomplete="off" placeholder="Ara veya listeden seç">
+    <ul id="ulist" hidden></ul>
     <label for="note">Ek açıklama</label>
     <textarea id="note"></textarea>
     <label>Parça resmi (isteğe bağlı)</label>
@@ -94,7 +104,7 @@ const fold = s => String(s).toLocaleLowerCase("tr").normalize("NFD")
   .replace(/[\u0300-\u036f]/g, "").replace(/ı/g, "i");
 const say = t => $("msg").textContent = t || "";
 
-fetch("data.json").then(r => r.json()).then(d => {
+fetch("data.json", {cache: "no-cache"}).then(r => r.json()).then(d => {
   ITEMS = Object.entries(d).map(([no, m]) => ({no, ...m, hay: fold(no + " " + m.aciklama)}));
 }).catch(() => say("Malzeme listesi yüklenemedi. İnternet bağlantınızı kontrol edin."));
 
@@ -243,12 +253,37 @@ $("clear").onclick = () => setPhoto(null);
   if (f) setPhoto(f);
 });
 
+let USERS = [];
+fetch("kisiler.txt", {cache: "no-cache"}).then(r => r.ok ? r.text() : "").then(t => {
+  USERS = [...new Set(t.replace(/^\uFEFF/, "").split(/\r?\n/).map(x => x.trim()).filter(Boolean))]
+    .sort((a, b) => a.localeCompare(b, "tr"));
+}).catch(() => {});
+
+function showUsers() {
+  const ul = $("ulist"), val = $("user").value.trim();
+  const words = fold(val).split(/\s+/).filter(Boolean);
+  const res = USERS.filter(n => { const f = fold(n); return words.every(w => f.includes(w)); });
+  ul.innerHTML = "";
+  res.forEach(n => {
+    const li = document.createElement("li"), b = document.createElement("button");
+    b.type = "button"; b.textContent = n;
+    b.onclick = () => { $("user").value = n; ul.hidden = true; };
+    li.appendChild(b); ul.appendChild(li);
+  });
+  ul.hidden = !res.length || (res.length === 1 && res[0] === val);
+}
+$("user").onfocus = $("user").oninput = showUsers;
+document.addEventListener("click", e => {
+  if (e.target !== $("user") && !$("ulist").contains(e.target)) $("ulist").hidden = true;
+});
+
 $("send").onclick = async () => {
   if (!current) return;
   const qty = $("qty").value.trim();
   if (!qty) { say("Adet bilgisini yazın."); $("qty").focus(); return; }
   say("");
   const note = $("note").value.trim();
+  const ifs = $("ifs").value.trim(), mk = $("mk").value.trim(), user = $("user").value.trim();
   const text = [
     "Malzeme No: " + current.no,
     "Açıklama: " + current.aciklama,
@@ -256,6 +291,9 @@ $("send").onclick = async () => {
     "Lokasyon No: " + current.lokasyon,
     "U/S/R No: " + current.usr,
     "Adet: " + qty,
+    ifs ? "IFS Bildirim No: " + ifs : "",
+    mk ? "Kullanılacak Makina Kodu (Nesne ID): " + mk : "",
+    user ? "Malzemeyi Kullanan: " + user : "",
     note ? "Ek Açıklama: " + note : ""
   ].filter(Boolean).join("\n");
 
