@@ -15,12 +15,15 @@ h1{font-size:1.25rem;margin:4px 0 0}
 label{font-size:.9rem;color:var(--mut)}
 input,textarea,button{font:inherit;width:100%;padding:12px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--ink)}
 textarea{min-height:70px;resize:vertical}
-button{background:var(--acc);color:var(--accink);border:0;font-weight:600;cursor:pointer}
-button.alt{background:transparent;color:var(--ink);border:1px solid var(--line)}
+button.main{background:var(--acc);color:var(--accink);border:0;font-weight:600;cursor:pointer}
 button:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
-.row{display:flex;gap:8px}
 #reader{width:100%;border-radius:10px;overflow:hidden}
 #reader:empty{display:none}
+#list{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+#list button{text-align:left;cursor:pointer;display:grid;gap:2px}
+#list b{font-weight:700}
+#list span{color:var(--mut);font-size:.9rem}
+.hint{color:var(--mut);font-size:.9rem;margin:0}
 dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:6px 12px}
 dt{color:var(--mut)}dd{margin:0;font-weight:600;overflow-wrap:anywhere}
 #msg{color:var(--err);min-height:1.2em;margin:0}
@@ -33,13 +36,11 @@ dt{color:var(--mut)}dd{margin:0;font-weight:600;overflow-wrap:anywhere}
   <h1>Malzeme Bildirimi</h1>
 
   <section class="card">
-    <button id="scan">Barkod okut</button>
+    <button class="main" id="scan">Barkod okut</button>
     <div id="reader"></div>
-    <label for="code">Veya Malzeme No yaz</label>
-    <div class="row">
-      <input id="code" inputmode="numeric" autocomplete="off">
-      <button class="alt" id="find" style="width:auto">Bul</button>
-    </div>
+    <label for="q">Malzeme No veya açıklama ara</label>
+    <input id="q" type="search" autocomplete="off" placeholder="Kodun veya açıklamanın bir kısmı">
+    <ul id="list"></ul>
     <p id="msg" role="status"></p>
   </section>
 
@@ -58,39 +59,81 @@ dt{color:var(--mut)}dd{margin:0;font-weight:600;overflow-wrap:anywhere}
     <label for="photo">Parça resmi (isteğe bağlı)</label>
     <input id="photo" type="file" accept="image/*">
     <img id="prev" alt="" hidden>
-    <button id="send">WhatsApp'a gönder</button>
+    <button class="main" id="send">WhatsApp'a gönder</button>
   </section>
 </main>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+<script>
+(function(){
+  var s=document.createElement("script");
+  s.src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js";
+  s.onerror=function(){var t=document.createElement("script");
+    t.src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js";
+    document.head.appendChild(t);};
+  document.head.appendChild(s);
+})();
+</script>
 <script>
 const $ = id => document.getElementById(id);
-let DATA = {}, current = null, scanner = null;
+const MAX = 30;
+let ITEMS = [], current = null, scanner = null;
 
-fetch("data.json").then(r => r.json()).then(d => DATA = d)
-  .catch(() => $("msg").textContent = "Malzeme listesi yüklenemedi. İnternet bağlantınızı kontrol edin.");
+// Büyük/küçük harf, Türkçe karakter (ı/i, ç, ş, ğ, ö, ü) farkı gözetmeden arama için
+const fold = s => String(s).toLocaleLowerCase("tr").normalize("NFD")
+  .replace(/[\u0300-\u036f]/g, "").replace(/ı/g, "i");
+const say = t => $("msg").textContent = t || "";
 
-const norm = s => String(s).trim().replace(/^0+/, "").toUpperCase();
+fetch("data.json").then(r => r.json()).then(d => {
+  ITEMS = Object.entries(d).map(([no, m]) => ({no, ...m, hay: fold(no + " " + m.aciklama)}));
+}).catch(() => say("Malzeme listesi yüklenemedi. İnternet bağlantınızı kontrol edin."));
 
-function lookup(raw) {
-  const code = String(raw).trim();
-  let key = DATA[code] ? code : Object.keys(DATA).find(k => norm(k) === norm(code));
-  if (!key) {
-    $("result").hidden = true; current = null;
-    $("msg").textContent = "Bulunamadı: " + code;
-    return;
-  }
-  const m = DATA[key];
-  current = {no: key, ...m};
-  $("msg").textContent = "";
-  $("r-no").textContent = key;
-  $("r-ac").textContent = m.aciklama;
-  $("r-mk").textContent = m.miktar;
-  $("r-lk").textContent = m.lokasyon;
-  $("r-us").textContent = m.usr;
-  $("result").hidden = false;
-  $("qty").focus();
+function search(q) {
+  const words = fold(q).split(/\s+/).filter(Boolean);
+  const fq = fold(q.trim());
+  return ITEMS.filter(i => words.every(w => i.hay.includes(w)))
+    .sort((a, b) => (fold(b.no) === fq) - (fold(a.no) === fq));
 }
+
+function showList(q) {
+  const ul = $("list");
+  ul.innerHTML = "";
+  say("");
+  if (q.trim().length < 2) return;
+  const res = search(q);
+  if (!res.length) return say("Eşleşen malzeme yok.");
+  res.slice(0, MAX).forEach(it => {
+    const li = document.createElement("li"), b = document.createElement("button");
+    const no = document.createElement("b"), ac = document.createElement("span");
+    no.textContent = it.no; ac.textContent = it.aciklama;
+    b.append(no, ac);
+    b.onclick = () => select(it);
+    li.appendChild(b); ul.appendChild(li);
+  });
+  if (res.length > MAX) {
+    const p = document.createElement("li");
+    p.className = "hint";
+    p.textContent = res.length + " sonuç var, ilk " + MAX + " tanesi gösteriliyor. Aramayı daraltın.";
+    ul.appendChild(p);
+  }
+  return res;
+}
+
+function select(it) {
+  current = it;
+  $("list").innerHTML = "";
+  $("r-no").textContent = it.no;
+  $("r-ac").textContent = it.aciklama;
+  $("r-mk").textContent = it.miktar;
+  $("r-lk").textContent = it.lokasyon;
+  $("r-us").textContent = it.usr;
+  $("result").hidden = false;
+  $("result").scrollIntoView({behavior: "smooth", block: "start"});
+}
+
+$("q").oninput = e => {
+  current = null; $("result").hidden = true;   // yeni arama: eski seçimi temizle
+  showList(e.target.value);
+};
 
 async function stopScan() {
   if (scanner) { try { await scanner.stop(); scanner.clear(); } catch (e) {} scanner = null; }
@@ -99,19 +142,26 @@ async function stopScan() {
 
 $("scan").onclick = async () => {
   if (scanner) return stopScan();
+  say("");
+  if (!window.Html5Qrcode) return say("Tarama bileşeni yüklenemedi. İnternet bağlantısını kontrol edip sayfayı yenileyin.");
+  if (!window.isSecureContext) return say("Kamera için sayfa https:// adresiyle açılmalı. Dosyayı çift tıklayıp açmak çalışmaz.");
   scanner = new Html5Qrcode("reader");
   $("scan").textContent = "Kamerayı kapat";
   try {
     await scanner.start({facingMode: "environment"}, {fps: 10, qrbox: {width: 260, height: 160}},
-      async text => { $("code").value = text; await stopScan(); lookup(text); });
+      async text => {
+        await stopScan();
+        $("q").value = text;
+        const res = showList(text);
+        if (res && res.length === 1) select(res[0]);
+      });
   } catch (e) {
     scanner = null; $("scan").textContent = "Barkod okut";
-    $("msg").textContent = "Kamera açılamadı. Kamera iznini kontrol edin.";
+    const m = String((e && e.message) || e);
+    say(/NotAllowed|Permission/i.test(m) ? "Kamera izni verilmedi. Tarayıcı ayarlarından bu site için kamerayı etkinleştirin."
+      : /NotFound/i.test(m) ? "Kamera bulunamadı." : "Kamera açılamadı: " + m);
   }
 };
-
-$("find").onclick = () => $("code").value.trim() && lookup($("code").value);
-$("code").onkeydown = e => { if (e.key === "Enter") $("find").click(); };
 
 $("photo").onchange = e => {
   const f = e.target.files[0];
@@ -122,8 +172,8 @@ $("photo").onchange = e => {
 $("send").onclick = async () => {
   if (!current) return;
   const qty = $("qty").value.trim();
-  if (!qty) { $("msg").textContent = "Adet bilgisini yazın."; $("qty").focus(); return; }
-  $("msg").textContent = "";
+  if (!qty) { say("Adet bilgisini yazın."); $("qty").focus(); return; }
+  say("");
   const note = $("note").value.trim();
   const text = [
     "Malzeme No: " + current.no,
@@ -142,11 +192,11 @@ $("send").onclick = async () => {
     } else if (navigator.share && !file) {
       await navigator.share({text});
     } else {
-      if (file) $("msg").textContent = "Bu cihaz resimli paylaşımı desteklemiyor, yalnızca metin gönderiliyor.";
+      if (file) say("Bu cihaz resimli paylaşımı desteklemiyor, yalnızca metin gönderiliyor.");
       window.open("https://wa.me/?text=" + encodeURIComponent(text), "_blank");
     }
   } catch (e) {
-    if (e.name !== "AbortError") $("msg").textContent = "Paylaşım açılamadı.";
+    if (e.name !== "AbortError") say("Paylaşım açılamadı.");
   }
 };
 </script>
