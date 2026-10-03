@@ -19,6 +19,7 @@ button.main{background:var(--acc);color:var(--accink);border:0;font-weight:600;c
 button:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
 #reader{width:100%;border-radius:10px;overflow:hidden}
 #reader:empty{display:none}
+#vid{width:100%;border-radius:10px;background:#000}
 #list{list-style:none;margin:0;padding:0;display:grid;gap:6px}
 #list button{text-align:left;cursor:pointer;display:grid;gap:2px}
 #list b{font-weight:700}
@@ -37,7 +38,10 @@ dt{color:var(--mut)}dd{margin:0;font-weight:600;overflow-wrap:anywhere}
 
   <section class="card">
     <button class="main" id="scan">Barkod okut</button>
+    <video id="vid" playsinline muted hidden></video>
     <div id="reader"></div>
+    <button id="shotbtn">Fotoğraf çekip oku</button>
+    <input id="shot" type="file" accept="image/*" capture="environment" hidden>
     <label for="q">Malzeme No veya açıklama ara</label>
     <input id="q" type="search" autocomplete="off" placeholder="Kodun veya açıklamanın bir kısmı">
     <ul id="list"></ul>
@@ -135,31 +139,85 @@ $("q").oninput = e => {
   showList(e.target.value);
 };
 
+let stream = null, loop = null;
+
 async function stopScan() {
+  if (loop) { clearInterval(loop); loop = null; }
+  if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
+  $("vid").hidden = true; $("vid").srcObject = null;
   if (scanner) { try { await scanner.stop(); scanner.clear(); } catch (e) {} scanner = null; }
   $("scan").textContent = "Barkod okut";
 }
 
+function found(text) {
+  stopScan();
+  $("q").value = text;
+  const res = showList(text);
+  if (res && res.length === 1) select(res[0]);
+}
+
+async function startNative() {
+  const det = new BarcodeDetector();
+  stream = await navigator.mediaDevices.getUserMedia({video: {facingMode: {ideal: "environment"}}});
+  const v = $("vid");
+  v.srcObject = stream; v.hidden = false;
+  await v.play();
+  loop = setInterval(async () => {
+    try {
+      const r = await det.detect(v);
+      if (loop && r.length) found(r[0].rawValue);
+    } catch (e) {}
+  }, 250);
+}
+
+function errText(e) {
+  const m = String((e && (e.name + " " + e.message)) || e);
+  if (/NotAllowed|Permission/i.test(m)) return "Kamera izni verilmedi. Chrome'da adres çubuğundaki simgeden bu site için kamerayı etkinleştirin.";
+  if (/NotFound|Overconstrained/i.test(m)) return "Kamera bulunamadı.";
+  if (/NotReadable|Abort/i.test(m)) return "Kamera başka bir uygulama tarafından kullanılıyor olabilir. Diğer uygulamaları kapatıp tekrar deneyin.";
+  return "Kamera açılamadı: " + m;
+}
+
 $("scan").onclick = async () => {
-  if (scanner) return stopScan();
-  say("");
-  if (!window.Html5Qrcode) return say("Tarama bileşeni yüklenemedi. İnternet bağlantısını kontrol edip sayfayı yenileyin.");
-  if (!window.isSecureContext) return say("Kamera için sayfa https:// adresiyle açılmalı. Dosyayı çift tıklayıp açmak çalışmaz.");
-  scanner = new Html5Qrcode("reader");
+  if (stream || scanner) return stopScan();
+  if (!window.isSecureContext) return say("Kamera için sayfa https:// adresiyle açılmalı.");
   $("scan").textContent = "Kamerayı kapat";
+  say("Kamera başlatılıyor…");
   try {
-    await scanner.start({facingMode: "environment"}, {fps: 10, qrbox: {width: 260, height: 160}},
-      async text => {
-        await stopScan();
-        $("q").value = text;
-        const res = showList(text);
-        if (res && res.length === 1) select(res[0]);
-      });
+    if ("BarcodeDetector" in window) {
+      await startNative();
+    } else {
+      if (!window.Html5Qrcode) throw new Error("Tarama bileşeni yüklenemedi.");
+      scanner = new Html5Qrcode("reader");
+      await scanner.start({facingMode: "environment"}, {fps: 10, qrbox: {width: 260, height: 160}}, found);
+    }
+    say("");
   } catch (e) {
-    scanner = null; $("scan").textContent = "Barkod okut";
-    const m = String((e && e.message) || e);
-    say(/NotAllowed|Permission/i.test(m) ? "Kamera izni verilmedi. Tarayıcı ayarlarından bu site için kamerayı etkinleştirin."
-      : /NotFound/i.test(m) ? "Kamera bulunamadı." : "Kamera açılamadı: " + m);
+    await stopScan();
+    say(errText(e));
+  }
+};
+
+// Canlı kamera çalışmazsa: telefonun kendi kamerasıyla fotoğraf çekip barkodu okur
+$("shotbtn").onclick = () => $("shot").click();
+$("shot").onchange = async e => {
+  const f = e.target.files[0];
+  e.target.value = "";
+  if (!f) return;
+  say("Barkod okunuyor…");
+  try {
+    let text = "";
+    if ("BarcodeDetector" in window) {
+      const r = await new BarcodeDetector().detect(await createImageBitmap(f));
+      text = r.length ? r[0].rawValue : "";
+    } else if (window.Html5Qrcode) {
+      text = await new Html5Qrcode("reader").scanFile(f, false);
+    }
+    if (!text) return say("Barkod okunamadı. Barkodu yakından ve net çekip tekrar deneyin.");
+    say("");
+    found(text);
+  } catch (err) {
+    say("Barkod okunamadı. Barkodu yakından ve net çekip tekrar deneyin.");
   }
 };
 
