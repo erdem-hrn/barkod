@@ -53,6 +53,8 @@ dt{font-weight:700}dd{margin:0;overflow-wrap:anywhere}
 #scan{display:flex;align-items:center;gap:10px}
 #scan span{flex:1;text-align:center}
 #scan svg{width:24px;height:24px;flex:none}
+#list strong{font-weight:700}
+.warn{margin:0;padding:10px;border:1px solid var(--err);border-radius:10px;background:#fdecea;color:var(--err);font-weight:700}
 [hidden]{display:none!important}
 </style>
 </head>
@@ -84,7 +86,7 @@ dt{font-weight:700}dd{margin:0;overflow-wrap:anywhere}
     <label for="qty">Çekilen Miktar *</label>
     <input id="qty" type="number" inputmode="numeric" min="1">
     <label for="ifs">IFS Bildirim No *</label>
-    <input id="ifs" type="text" autocomplete="off">
+    <input id="ifs" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off">
     <label for="mk">Kullanılacak Makina Kodu (Nesne ID) *</label>
     <input id="mk" type="text" autocomplete="off" autocapitalize="characters">
     <label for="user">Malzemeyi Kullanan (Ad Soyad) *</label>
@@ -111,6 +113,7 @@ dt{font-weight:700}dd{margin:0;overflow-wrap:anywhere}
   <div class="sheet">
     <h2 id="ctitle">Kontrol edin lütfen</h2>
     <div id="cbody"></div>
+    <p class="warn">!!! Mesajı lütfen "MALZEME ÇEKİMİ" grubuna gönderiniz.</p>
     <p class="ask">Emin misiniz?</p>
     <div class="two">
       <button type="button" class="main" id="yes">Evet</button>
@@ -162,9 +165,10 @@ function showList(q) {
   if (!res.length) return say("Listede olmayan malzeme için bildirim gönderilemez.");
   res.slice(0, MAX).forEach(it => {
     const li = document.createElement("li"), b = document.createElement("button");
-    const no = document.createElement("b"), ac = document.createElement("span");
+    const no = document.createElement("b"), ac = document.createElement("span"), mk = document.createElement("strong");
     no.textContent = it.no; ac.textContent = it.aciklama;
-    b.append(no, ac);
+    mk.textContent = "Depodaki Miktar: " + (it.miktar || "-");
+    b.append(no, ac, mk);
     b.onclick = () => select(it);
     li.appendChild(b); ul.appendChild(li);
   });
@@ -314,6 +318,11 @@ $("user").onfocus = $("user").oninput = showUsers;
 document.addEventListener("click", e => {
   if (e.target !== $("user") && !$("ulist").contains(e.target)) $("ulist").hidden = true;
 });
+
+$("ifs").oninput = e => {
+  const v = e.target.value.replace(/\D/g, "");
+  if (v !== e.target.value) e.target.value = v;
+};
 
 $("mk").oninput = e => {
   const el = e.target, pos = el.selectionStart;
