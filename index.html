@@ -14,7 +14,7 @@ header{display:flex;align-items:center;gap:12px;margin-top:4px}
 #logo{width:44px;height:44px;border-radius:8px;flex:none}
 h1{font-size:1.1rem;line-height:1.2;margin:0}
 .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;display:grid;gap:10px}
-label{font-size:.9rem;color:var(--mut)}
+label{font-size:.9rem;font-weight:700}
 input,textarea,button{font:inherit;width:100%;padding:12px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--ink)}
 textarea{min-height:70px;resize:vertical}
 button.main{background:var(--acc);color:var(--accink);border:0;font-weight:600;cursor:pointer}
@@ -32,9 +32,17 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px soli
 #list span{color:var(--mut);font-size:.9rem}
 .hint{color:var(--mut);font-size:.9rem;margin:0}
 dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:6px 12px}
-dt{color:var(--mut)}dd{margin:0;font-weight:600;overflow-wrap:anywhere}
+dt{font-weight:700}dd{margin:0;overflow-wrap:anywhere}
 #msg{color:var(--err);min-height:1.2em;margin:0}
 #prev{max-width:100%;border-radius:10px}
+#count{color:var(--ink);font-weight:600}
+#note{text-transform:uppercase}
+#confirm{position:fixed;inset:0;background:rgba(0,0,0,.55);display:grid;place-items:center;padding:16px;z-index:10}
+.sheet{background:var(--card);color:var(--ink);border-radius:14px;padding:16px;max-width:480px;width:100%;max-height:90vh;overflow:auto;display:grid;gap:12px}
+.sheet h2{margin:0;font-size:1.1rem}
+#cbody div{overflow-wrap:anywhere}
+#cbody .gap{height:12px}
+.ask{font-weight:700;margin:0}
 [hidden]{display:none!important}
 </style>
 </head>
@@ -48,8 +56,9 @@ dt{color:var(--mut)}dd{margin:0;font-weight:600;overflow-wrap:anywhere}
     <div id="reader"></div>
     <button id="shotbtn">Fotoğraf çekip oku</button>
     <input id="shot" type="file" accept="image/*" capture="environment" hidden>
-    <label for="q">Malzeme No veya açıklama ara</label>
+    <label for="q">Malzeme No veya Açıklama ile Ara</label>
     <input id="q" type="search" autocomplete="off" placeholder="Kodun veya açıklamanın bir kısmı">
+    <p id="count" class="hint" role="status" hidden></p>
     <ul id="list"></ul>
     <p id="msg" role="status"></p>
   </section>
@@ -72,7 +81,7 @@ dt{color:var(--mut)}dd{margin:0;font-weight:600;overflow-wrap:anywhere}
     <input id="user" type="text" autocomplete="off" placeholder="Ara ve listeden seç">
     <ul id="ulist" hidden></ul>
     <label for="note">Ek açıklama</label>
-    <textarea id="note"></textarea>
+    <textarea id="note" autocapitalize="characters"></textarea>
     <label>Parça resmi (isteğe bağlı)</label>
     <div class="two">
       <button type="button" id="pick">Dosya seç</button>
@@ -84,7 +93,21 @@ dt{color:var(--mut)}dd{margin:0;font-weight:600;overflow-wrap:anywhere}
     <button type="button" id="clear" hidden>Resmi kaldır</button>
     <button class="main" id="send">WhatsApp'a gönder</button>
   </section>
+
+  <button type="button" id="resetall">Temizle</button>
 </main>
+
+<div id="confirm" role="dialog" aria-modal="true" aria-labelledby="ctitle" hidden>
+  <div class="sheet">
+    <h2 id="ctitle">Kontrol edin lütfen</h2>
+    <div id="cbody"></div>
+    <p class="ask">Emin misiniz?</p>
+    <div class="two">
+      <button type="button" class="main" id="yes">Evet</button>
+      <button type="button" id="no">Hayır</button>
+    </div>
+  </div>
+</div>
 
 <script>
 (function(){
@@ -121,9 +144,12 @@ function showList(q) {
   const ul = $("list");
   ul.innerHTML = "";
   say("");
+  $("count").hidden = true;
   if (q.trim().length < 2) return;
   const res = search(q);
-  if (!res.length) return say("Eşleşen malzeme yok.");
+  $("count").textContent = res.length + " adet ürün bulundu";
+  $("count").hidden = false;
+  if (!res.length) return say("Listede olmayan malzeme için bildirim gönderilemez.");
   res.slice(0, MAX).forEach(it => {
     const li = document.createElement("li"), b = document.createElement("button");
     const no = document.createElement("b"), ac = document.createElement("span");
@@ -135,7 +161,7 @@ function showList(q) {
   if (res.length > MAX) {
     const p = document.createElement("li");
     p.className = "hint";
-    p.textContent = res.length + " sonuç var, ilk " + MAX + " tanesi gösteriliyor. Aramayı daraltın.";
+    p.textContent = "İlk " + MAX + " tanesi gösteriliyor. Aramayı daraltın.";
     ul.appendChild(p);
   }
   return res;
@@ -144,6 +170,7 @@ function showList(q) {
 function select(it) {
   current = it;
   $("list").innerHTML = "";
+  $("count").hidden = true;
   $("r-no").textContent = it.no;
   $("r-ac").textContent = it.aciklama;
   $("r-mk").textContent = it.miktar;
@@ -288,42 +315,83 @@ const icon = document.createElement("link");
 icon.rel = "icon"; icon.href = $("logo").src;
 document.head.appendChild(icon);
 
-$("send").onclick = async () => {
-  if (!current) return;
+let pending = null;
+
+function resetForm() {
+  current = null; pending = null;
+  stopScan();
+  ["q", "qty", "ifs", "mk", "user", "note"].forEach(id => $(id).value = "");
+  $("list").innerHTML = ""; $("ulist").innerHTML = ""; $("ulist").hidden = true;
+  $("count").hidden = true; $("result").hidden = true; $("confirm").hidden = true;
+  setPhoto(null);
+  say("");
+  window.scrollTo({top: 0, behavior: "smooth"});
+}
+$("resetall").onclick = resetForm;
+
+$("send").onclick = () => {
+  if (!current) return say("Listede olmayan malzeme için bildirim gönderilemez. Listeden bir malzeme seçin.");
   const need = (ad, id) => { say(ad + " alanı zorunludur."); $(id).focus(); };
   const qty = $("qty").value.trim();
   const ifs = $("ifs").value.trim(), mk = $("mk").value.trim().toUpperCase();
   const val = $("user").value.trim();
   const user = USERS.find(n => fold(n) === fold(val));   // yalnızca listedeki isimler kabul edilir
-  const note = $("note").value.trim();
+  const note = $("note").value.trim().toLocaleUpperCase("tr");
   if (!(Number(qty) > 0)) return need("Çekilen Miktar", "qty");
   if (!ifs) return need("IFS Bildirim No", "ifs");
   if (!mk) return need("Kullanılacak Makina Kodu", "mk");
   if (!USERS.length) return say("Kişi listesi yüklenemedi. Sayfayı yenileyip tekrar deneyin.");
   if (!user) { say("Malzemeyi Kullanan için listeden bir isim seçin."); $("user").focus(); showUsers(); return; }
   say("");
-  const text = [
-    "Malzeme No: " + current.no,
-    "Açıklama: " + current.aciklama,
-    "Depodaki Miktar: " + current.miktar,
-    "Lokasyon No: " + current.lokasyon,
-    "Çekilen Miktar: " + qty,
-    "IFS Bildirim No: " + ifs,
-    "Kullanılacak Makina Kodu (Nesne ID): " + mk,
-    "Malzemeyi Kullanan: " + user,
-    note ? "Ek Açıklama: " + note : ""
-  ].filter(Boolean).join("\n");
 
-  const file = photoFile;
+  const rows = [
+    ["Malzeme No", current.no],
+    ["Açıklama", current.aciklama],
+    ["Depodaki Miktar", current.miktar],
+    ["Lokasyon No", current.lokasyon],
+    null,
+    ["Çekilen Miktar", qty],
+    ["IFS Bildirim No", ifs],
+    ["Kullanılacak Makina Kodu (Nesne ID)", mk],
+    ["Malzemeyi Kullanan", user]
+  ];
+  if (note) rows.push(["Ek Açıklama", note]);
+
+  const body = $("cbody");
+  body.innerHTML = "";
+  rows.forEach(r => {
+    const d = document.createElement("div");
+    if (r) { const b = document.createElement("b"); b.textContent = r[0] + ":"; d.append(b, " " + r[1]); }
+    else d.className = "gap";
+    body.appendChild(d);
+  });
+  if (photoFile) {
+    const d = document.createElement("div");
+    d.className = "hint"; d.textContent = "Parça resmi mesajla birlikte gönderilecek.";
+    body.appendChild(d);
+  }
+  pending = {text: rows.map(r => r ? "*" + r[0] + ":* " + r[1] : "").join("\n"), file: photoFile};
+  $("confirm").hidden = false;
+};
+
+$("no").onclick = () => { $("confirm").hidden = true; pending = null; };
+
+$("yes").onclick = async () => {
+  if (!pending) return;
+  const {text, file} = pending;
+  $("confirm").hidden = true; pending = null;
+  let warn = "";
   try {
     if (file && navigator.canShare && navigator.canShare({files: [file]})) {
       await navigator.share({text, files: [file]});
     } else if (navigator.share && !file) {
       await navigator.share({text});
     } else {
-      if (file) say("Bu cihaz resimli paylaşımı desteklemiyor, yalnızca metin gönderiliyor.");
+      if (file) warn = "Bu cihaz resimli paylaşımı desteklemiyor, yalnızca metin gönderildi.";
       window.open("https://wa.me/?text=" + encodeURIComponent(text), "_blank");
     }
+    resetForm();
+    if (warn) say(warn);
   } catch (e) {
     if (e.name !== "AbortError") say("Paylaşım açılamadı.");
   }
