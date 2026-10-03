@@ -7,7 +7,6 @@ Ahmet Ender Öztürk
 Fatih Öksüz
 Hüseyin Özcan
 Abdülkadir Mamak
-Bekir Yalçın
 Erhan Tok
 Kadir Ayan
 Muhammet Sezer
@@ -31,5 +30,7 @@ Salih Horuz
 Sefa Kurt
 Semih Arslan
 Uğur Aydın
+Murat Yaman
+
 
 
