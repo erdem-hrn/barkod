@@ -1,0 +1,41 @@
+name: Veriyi güncelle
+
+# malzemeler.xlsx dosyası depoya yüklenince data.json otomatik üretilir.
+on:
+  push:
+    paths:
+      - "malzemeler.xlsx"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+
+jobs:
+  guncelle:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - run: pip install openpyxl
+
+      - name: Excel'i data.json'a çevir
+        run: python convert.py malzemeler.xlsx data.json
+
+      - name: data.json'u depoya kaydet
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data.json
+          git diff --cached --quiet || git commit -m "Veri güncellendi"
+          git push
+
+      - name: Yayını yenile
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api -X POST "/repos/${{ github.repository }}/pages/builds"
