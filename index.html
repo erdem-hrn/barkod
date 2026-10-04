@@ -63,7 +63,14 @@ dt{font-weight:700}dd{margin:0;overflow-wrap:anywhere}
 #list strong{font-weight:700}
 .warn{margin:0;padding:10px;border:1px solid var(--err);border-radius:10px;background:#fdecea;color:var(--err);font-weight:700}
 #upd,#info{text-align:center}
-#upd{color:var(--ink);font-weight:600}
+#upd{color:var(--ink);font-weight:600;font-size:.75rem}
+.item{background:var(--field);border:1px solid var(--line);border-radius:10px;padding:10px;display:grid;gap:8px}
+#list .head{display:grid;gap:2px;width:100%;padding:0;border:0;background:transparent;text-align:left;cursor:pointer}
+#list div.head{cursor:default}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{width:auto;display:inline-block;padding:6px 10px;font-size:.82rem;border-radius:999px;cursor:pointer;text-align:center}
+#list .chip{display:inline-block;background:var(--btn);border:1px solid var(--line)}
+.chip[aria-pressed="true"]{background:var(--acc);color:var(--accink);border-color:var(--acc)}
 [hidden]{display:none!important}
 </style>
 </head>
@@ -78,7 +85,7 @@ dt{font-weight:700}dd{margin:0;overflow-wrap:anywhere}
     <div id="reader"></div>
     <button id="shotbtn">Fotoğraf çekerek okut</button>
     <input id="shot" type="file" accept="image/*" capture="environment" hidden>
-    <label for="q">ZZ No / Malzeme Tipi veya Tanımı ile Ara</label>
+    <label for="q">ZZ No / Tip Bilgisi veya Tanım ile Ara</label>
     <input id="q" type="search" autocomplete="off" placeholder="Kodun veya açıklamanın bir kısmı">
     <p id="count" class="hint" role="status" hidden></p>
     <ul id="list"></ul>
@@ -91,7 +98,10 @@ dt{font-weight:700}dd{margin:0;overflow-wrap:anywhere}
       <dt>Açıklama</dt><dd id="r-ac"></dd>
       <dt>Depodaki Miktar</dt><dd id="r-mk"></dd>
       <dt>Lokasyon No</dt><dd id="r-lk"></dd>
+      <dt>Lokasyondaki Miktar</dt><dd id="r-lm"></dd>
     </dl>
+    <p class="hint" id="locshint" hidden>Başka lokasyon seçmek için dokunun:</p>
+    <div id="locs" class="chips" hidden></div>
     <p class="hint">* ile işaretli alanlar zorunludur.</p>
     <label for="qty">Çekilen Miktar *</label>
     <input id="qty" type="number" inputmode="numeric" min="1">
@@ -117,7 +127,7 @@ dt{font-weight:700}dd{margin:0;overflow-wrap:anywhere}
   </section>
 
   <button type="button" id="resetall">Temizle</button>
-  <p id="info" class="hint">Sürüm V12.0 · Yapımcı: [H.Erdem / Bakım]</p>
+  <p id="info" class="hint">Sürüm 2.0 · Yapımcı: [H.Erdem / Bakım]</p>
 </main>
 
 <div id="confirm" role="dialog" aria-modal="true" aria-labelledby="ctitle" hidden>
@@ -155,8 +165,13 @@ const say = t => $("msg").textContent = t || "";
 
 fetch("data.json", {cache: "no-cache"}).then(r => r.json()).then(d => {
   const veri = d.veri && typeof d.veri === "object" ? d.veri : d;
-  if (d.guncelleme) { $("upd").textContent = "Malzeme listesi güncelleme: " + d.guncelleme; $("upd").hidden = false; }
-  ITEMS = Object.entries(veri).map(([no, m]) => ({no, ...m, hay: fold(no + " " + m.aciklama)}));
+  if (d.guncelleme) { $("upd").textContent = "Veri güncelleme : " + d.guncelleme + (d.kayit != null ? " / Veri Adet : " + d.kayit : ""); $("upd").hidden = false; }
+  ITEMS = Object.entries(veri).map(([no, m]) => ({
+    no, aciklama: m.aciklama || "",
+    toplam: m.toplam ?? m.miktar ?? "",
+    lok: m.lok || [[m.lokasyon || "-", m.miktar ?? ""]],   // eski biçimle uyumlu
+    hay: fold(no + " " + (m.aciklama || ""))
+  }));
 }).catch(() => say("Malzeme listesi yüklenemedi. İnternet bağlantınızı kontrol edin."));
 
 function search(q) {
@@ -177,13 +192,32 @@ function showList(q) {
   $("count").hidden = false;
   if (!res.length) return say("Listede olmayan malzeme için bildirim gönderilemez.");
   res.slice(0, MAX).forEach(it => {
-    const li = document.createElement("li"), b = document.createElement("button");
+    const li = document.createElement("li");
+    li.className = "item";
+    const single = it.lok.length === 1;
+    const head = document.createElement(single ? "button" : "div");
+    head.className = "head";
+    if (single) { head.type = "button"; head.onclick = () => select(it, it.lok[0]); }
     const no = document.createElement("b"), ac = document.createElement("span"), mk = document.createElement("strong");
     no.textContent = it.no; ac.textContent = it.aciklama;
-    mk.textContent = "Depodaki Miktar: " + (it.miktar || "-");
-    b.append(no, ac, mk);
-    b.onclick = () => select(it);
-    li.appendChild(b); ul.appendChild(li);
+    mk.textContent = "Depodaki Miktar: " + (it.toplam || "-");
+    head.append(no, ac, mk);
+    li.appendChild(head);
+    if (!single) {
+      const h = document.createElement("div");
+      h.className = "hint"; h.textContent = "Lokasyon seçmek için dokunun:";
+      li.appendChild(h);
+    }
+    const chips = document.createElement("div");
+    chips.className = "chips";
+    it.lok.forEach(l => {
+      const c = document.createElement("button");
+      c.type = "button"; c.className = "chip"; c.textContent = l[0] + ": " + l[1];
+      c.onclick = () => select(it, l);
+      chips.appendChild(c);
+    });
+    li.appendChild(chips);
+    ul.appendChild(li);
   });
   if (res.length > MAX) {
     const p = document.createElement("li");
@@ -194,16 +228,28 @@ function showList(q) {
   return res;
 }
 
-function select(it) {
-  current = it;
+function select(it, loc) {
+  const ilk = $("result").hidden;
+  current = {it, no: it.no, aciklama: it.aciklama, toplam: it.toplam, lokasyon: loc[0], lokmiktar: loc[1]};
   $("list").innerHTML = "";
   $("count").hidden = true;
   $("r-no").textContent = it.no;
   $("r-ac").textContent = it.aciklama;
-  $("r-mk").textContent = it.miktar;
-  $("r-lk").textContent = it.lokasyon;
+  $("r-mk").textContent = it.toplam;
+  $("r-lk").textContent = loc[0];
+  $("r-lm").textContent = loc[1];
+  const cok = it.lok.length > 1;
+  $("locshint").hidden = $("locs").hidden = !cok;
+  $("locs").innerHTML = "";
+  if (cok) it.lok.forEach(l => {
+    const c = document.createElement("button");
+    c.type = "button"; c.className = "chip"; c.textContent = l[0] + ": " + l[1];
+    c.setAttribute("aria-pressed", String(l === loc));
+    c.onclick = () => select(it, l);
+    $("locs").appendChild(c);
+  });
   $("result").hidden = false;
-  $("result").scrollIntoView({behavior: "smooth", block: "start"});
+  if (ilk) $("result").scrollIntoView({behavior: "smooth", block: "start"});
 }
 
 $("q").oninput = e => {
@@ -225,7 +271,7 @@ function found(text) {
   stopScan();
   $("q").value = text;
   const res = showList(text);
-  if (res && res.length === 1) select(res[0]);
+  if (res && res.length === 1 && res[0].lok.length === 1) select(res[0], res[0].lok[0]);
 }
 
 async function startNative() {
@@ -375,8 +421,9 @@ $("send").onclick = () => {
   const rows = [
     ["Malzeme No", current.no],
     ["Açıklama", current.aciklama],
-    ["Depodaki Miktar", current.miktar],
+    ["Depodaki Miktar", current.toplam],
     ["Lokasyon No", current.lokasyon],
+    ["Lokasyondaki Miktar", current.lokmiktar],
     null,
     ["Çekilen Miktar", qty],
     ["IFS Bildirim No", ifs],
