@@ -1,10 +1,12 @@
 name: Veriyi güncelle
 
-# malzemeler.xlsx dosyası depoya yüklenince data.json otomatik üretilir.
+# Depoya bir Excel (.xlsx) dosyası yüklenince data.json otomatik üretilir.
+# Dosya adı önemli değil (büyük/küçük harf dahil); birden fazla Excel varsa
+# en son yüklenen kullanılır.
 on:
   push:
     paths:
-      - "malzemeler.xlsx"
+      - "*.[xX][lL][sS][xX]"
   workflow_dispatch:
 
 permissions:
@@ -16,6 +18,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-python@v5
         with:
@@ -23,8 +27,23 @@ jobs:
 
       - run: pip install openpyxl
 
+      - name: En son yüklenen Excel dosyasını bul
+        id: excel
+        run: |
+          latest=""; latest_t=0
+          for f in *.[xX][lL][sS][xX]; do
+            [ -e "$f" ] || continue
+            t=$(git log -1 --format=%ct -- "$f")
+            if [ "${t:-0}" -gt "$latest_t" ]; then latest_t=$t; latest="$f"; fi
+          done
+          if [ -z "$latest" ]; then echo "Depoda .xlsx dosyası bulunamadı."; exit 1; fi
+          echo "Kullanılan Excel: $latest"
+          echo "file=$latest" >> "$GITHUB_OUTPUT"
+
       - name: Excel'i data.json'a çevir
-        run: python convert.py malzemeler.xlsx data.json
+        env:
+          EXCEL: ${{ steps.excel.outputs.file }}
+        run: python convert.py "$EXCEL" data.json
 
       - name: data.json'u depoya kaydet
         run: |
