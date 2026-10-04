@@ -49,7 +49,7 @@ dt{font-weight:700}dd{margin:0;overflow-wrap:anywhere}
 #prev{max-width:100%;border-radius:10px}
 #count{color:var(--ink);font-weight:600}
 #note{text-transform:uppercase}
-#confirm{position:fixed;inset:0;background:rgba(0,0,0,.55);display:grid;place-items:center;padding:16px;z-index:10}
+#confirm,#qrbox{position:fixed;inset:0;background:rgba(0,0,0,.55);display:grid;place-items:center;padding:16px;z-index:10}
 .sheet{background:var(--card);color:var(--ink);border-radius:14px;padding:16px;max-width:480px;width:100%;max-height:90vh;overflow:auto;display:grid;gap:12px}
 .sheet h2{margin:0;font-size:1.1rem}
 #cbody div{overflow-wrap:anywhere}
@@ -71,6 +71,14 @@ dt{font-weight:700}dd{margin:0;overflow-wrap:anywhere}
 .chip{width:auto;display:inline-block;padding:6px 10px;font-size:.82rem;border-radius:999px;cursor:pointer;text-align:center}
 #list .chip{display:inline-block;background:var(--btn);border:1px solid var(--line)}
 .chip[aria-pressed="true"]{background:var(--acc);color:var(--accink);border-color:var(--acc)}
+label[for="q"]{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+#q::placeholder{color:var(--ink);opacity:.75;font-weight:600;font-size:min(.95rem,3.4vw)}
+#q{padding-left:10px;padding-right:4px}
+#shotbtn{display:flex;align-items:center;justify-content:center;gap:10px}
+#shotbtn svg{width:24px;height:24px;flex:none}
+#qrbtn{width:auto;display:inline-flex;align-items:center;gap:6px;padding:4px 10px;margin-left:6px;font-size:.8rem;font-weight:600;cursor:pointer}
+#qrbtn svg{width:16px;height:16px}
+#qrimg{width:240px;max-width:100%;justify-self:center;border-radius:8px}
 [hidden]{display:none!important}
 </style>
 </head>
@@ -83,10 +91,10 @@ dt{font-weight:700}dd{margin:0;overflow-wrap:anywhere}
     <button class="main" id="scan"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="2" y="4" width="2" height="16"/><rect x="5.5" y="4" width="1" height="16"/><rect x="8" y="4" width="3" height="16"/><rect x="12.5" y="4" width="1" height="16"/><rect x="15" y="4" width="2" height="16"/><rect x="18.5" y="4" width="1" height="16"/><rect x="21" y="4" width="1" height="16"/></svg><span id="scanlbl">Barkod veya QR okut</span><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3.8" y="3.8" width="5.6" height="5.6"/><rect x="14.6" y="3.8" width="5.6" height="5.6"/><rect x="3.8" y="14.6" width="5.6" height="5.6"/></g><rect x="5.6" y="5.6" width="2" height="2"/><rect x="16.4" y="5.6" width="2" height="2"/><rect x="5.6" y="16.4" width="2" height="2"/><rect x="14" y="14" width="2.5" height="2.5"/><rect x="18.5" y="14" width="2.5" height="2.5"/><rect x="14" y="18.5" width="2.5" height="2.5"/><rect x="18.5" y="18.5" width="2.5" height="2.5"/></svg></button>
     <video id="vid" playsinline muted hidden></video>
     <div id="reader"></div>
-    <button id="shotbtn">Fotoğraf çekerek okut</button>
+    <button id="shotbtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l1.5-2h7L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13.5" r="3.6"/></svg><span>Fotoğraf çekerek okut</span></button>
     <input id="shot" type="file" accept="image/*" capture="environment" hidden>
     <label for="q">ZZ No / Tip Bilgisi veya Tanım ile Ara</label>
-    <input id="q" type="search" autocomplete="off" placeholder="Kodun veya açıklamanın bir kısmı">
+    <input id="q" type="search" autocomplete="off" placeholder="ZZ No / Tip Bilgisi veya Tanım ile Ara">
     <p id="count" class="hint" role="status" hidden></p>
     <ul id="list"></ul>
     <p id="msg" role="status"></p>
@@ -127,8 +135,17 @@ dt{font-weight:700}dd{margin:0;overflow-wrap:anywhere}
   </section>
 
   <button type="button" id="resetall">Temizle</button>
-  <p id="info" class="hint">Sürüm 2.0 · Yapımcı: [H.Erdem / Bakım]</p>
+  <p id="info" class="hint">Sürüm 2.1 · Yapımcı: [H.Erdem / Bakım]<button type="button" id="qrbtn"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3.8" y="3.8" width="5.6" height="5.6"/><rect x="14.6" y="3.8" width="5.6" height="5.6"/><rect x="3.8" y="14.6" width="5.6" height="5.6"/></g><rect x="5.6" y="5.6" width="2" height="2"/><rect x="16.4" y="5.6" width="2" height="2"/><rect x="5.6" y="16.4" width="2" height="2"/><rect x="14" y="14" width="2.5" height="2.5"/><rect x="18.5" y="14" width="2.5" height="2.5"/><rect x="14" y="18.5" width="2.5" height="2.5"/><rect x="18.5" y="18.5" width="2.5" height="2.5"/></svg>QR ile Paylaş</button></p>
 </main>
+
+<div id="qrbox" role="dialog" aria-modal="true" aria-labelledby="qrtitle" hidden>
+  <div class="sheet">
+    <h2 id="qrtitle">Uygulamayı Paylaş</h2>
+    <p class="hint">QR kodu telefonun kamerasıyla okutarak uygulamayı açın.</p>
+    <img id="qrimg" alt="Uygulama adresi QR kodu" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzNyAzNyIgc2hhcGUtcmVuZGVyaW5nPSJjcmlzcEVkZ2VzIj48cmVjdCB3aWR0aD0iMzciIGhlaWdodD0iMzciIGZpbGw9IiNmZmYiLz48cGF0aCBmaWxsPSIjMDAwIiBkPSJNNCA0aDd2MWgtN3pNMTIgNGgydjFoLTJ6TTE5IDRoMnYxaC0yek0yMyA0aDJ2MWgtMnpNMjYgNGg3djFoLTd6TTQgNWgxdjFoLTF6TTEwIDVoMXYxaC0xek0xOCA1aDJ2MWgtMnpNMjEgNWgydjFoLTJ6TTI0IDVoMXYxaC0xek0yNiA1aDF2MWgtMXpNMzIgNWgxdjFoLTF6TTQgNmgxdjFoLTF6TTYgNmgzdjFoLTN6TTEwIDZoMXYxaC0xek0xMiA2aDF2MWgtMXpNMTUgNmg1djFoLTV6TTIyIDZoMnYxaC0yek0yNiA2aDF2MWgtMXpNMjggNmgzdjFoLTN6TTMyIDZoMXYxaC0xek00IDdoMXYxaC0xek02IDdoM3YxaC0zek0xMCA3aDF2MWgtMXpNMTIgN2gydjFoLTJ6TTE1IDdoMXYxaC0xek0yMSA3aDF2MWgtMXpNMjMgN2gxdjFoLTF6TTI2IDdoMXYxaC0xek0yOCA3aDN2MWgtM3pNMzIgN2gxdjFoLTF6TTQgOGgxdjFoLTF6TTYgOGgzdjFoLTN6TTEwIDhoMXYxaC0xek0xMiA4aDR2MWgtNHpNMTcgOGgxdjFoLTF6TTIxIDhoMXYxaC0xek0yMyA4aDF2MWgtMXpNMjYgOGgxdjFoLTF6TTI4IDhoM3YxaC0zek0zMiA4aDF2MWgtMXpNNCA5aDF2MWgtMXpNMTAgOWgxdjFoLTF6TTEzIDloMXYxaC0xek0xNiA5aDF2MWgtMXpNMTggOWgxdjFoLTF6TTIxIDloMXYxaC0xek0yMyA5aDF2MWgtMXpNMjYgOWgxdjFoLTF6TTMyIDloMXYxaC0xek00IDEwaDd2MWgtN3pNMTIgMTBoMXYxaC0xek0xNCAxMGgxdjFoLTF6TTE2IDEwaDF2MWgtMXpNMTggMTBoMXYxaC0xek0yMCAxMGgxdjFoLTF6TTIyIDEwaDF2MWgtMXpNMjQgMTBoMXYxaC0xek0yNiAxMGg3djFoLTd6TTEzIDExaDF2MWgtMXpNMTUgMTFoMXYxaC0xek0xNyAxMWg1djFoLTV6TTQgMTJoNHYxaC00ek0xMCAxMmgxdjFoLTF6TTEyIDEyaDF2MWgtMXpNMTcgMTJoNXYxaC01ek0yMyAxMmgzdjFoLTN6TTI4IDEyaDN2MWgtM3pNMzIgMTJoMXYxaC0xek00IDEzaDR2MWgtNHpNMTMgMTNoMXYxaC0xek0yMSAxM2g4djFoLTh6TTMyIDEzaDF2MWgtMXpNNCAxNGgxdjFoLTF6TTYgMTRoMXYxaC0xek04IDE0aDF2MWgtMXpNMTAgMTRoM3YxaC0zek0xOCAxNGgxdjFoLTF6TTIyIDE0aDF2MWgtMXpNMjUgMTRoMnYxaC0yek0zMCAxNGgydjFoLTJ6TTQgMTVoNHYxaC00ek0xMSAxNWgydjFoLTJ6TTE1IDE1aDR2MWgtNHpNMjMgMTVoMXYxaC0xek0yNSAxNWgzdjFoLTN6TTMyIDE1aDF2MWgtMXpNNSAxNmgzdjFoLTN6TTkgMTZoMnYxaC0yek0xMyAxNmgxdjFoLTF6TTE1IDE2aDF2MWgtMXpNMTkgMTZoMXYxaC0xek0yMSAxNmgxdjFoLTF6TTIzIDE2aDF2MWgtMXpNMjUgMTZoMXYxaC0xek0yOSAxNmgydjFoLTJ6TTQgMTdoMXYxaC0xek02IDE3aDF2MWgtMXpNOCAxN2gxdjFoLTF6TTE0IDE3aDJ2MWgtMnpNMTcgMTdoMXYxaC0xek0xOSAxN2gydjFoLTJ6TTIzIDE3aDF2MWgtMXpNMjYgMTdoMXYxaC0xek0zMCAxN2gzdjFoLTN6TTYgMThoMnYxaC0yek05IDE4aDJ2MWgtMnpNMTIgMThoMXYxaC0xek0xNCAxOGgxdjFoLTF6TTE2IDE4aDF2MWgtMXpNMTggMThoMXYxaC0xek0yMyAxOGgzdjFoLTN6TTMwIDE4aDN2MWgtM3pNNiAxOWgzdjFoLTN6TTEzIDE5aDF2MWgtMXpNMTYgMTloMnYxaC0yek0yMCAxOWgxdjFoLTF6TTIzIDE5aDJ2MWgtMnpNMjcgMTloMnYxaC0yek0zMSAxOWgxdjFoLTF6TTQgMjBoMXYxaC0xek02IDIwaDN2MWgtM3pNMTAgMjBoMnYxaC0yek0xMyAyMGgzdjFoLTN6TTE5IDIwaDF2MWgtMXpNMjIgMjBoMXYxaC0xek0yNCAyMGgydjFoLTJ6TTI3IDIwaDN2MWgtM3pNMzEgMjBoMXYxaC0xek01IDIxaDF2MWgtMXpNNyAyMWgydjFoLTJ6TTExIDIxaDJ2MWgtMnpNMTYgMjFoMnYxaC0yek0xOSAyMWgxdjFoLTF6TTIxIDIxaDF2MWgtMXpNMjQgMjFoMXYxaC0xek0yNyAyMWgxdjFoLTF6TTI5IDIxaDN2MWgtM3pNNCAyMmgxdjFoLTF6TTYgMjJoMXYxaC0xek04IDIyaDN2MWgtM3pNMTUgMjJoMnYxaC0yek0xOSAyMmgzdjFoLTN6TTI1IDIyaDJ2MWgtMnpNMzAgMjJoMXYxaC0xek02IDIzaDF2MWgtMXpNOCAyM2gxdjFoLTF6TTEyIDIzaDN2MWgtM3pNMTYgMjNoMXYxaC0xek0xOSAyM2gxdjFoLTF6TTIxIDIzaDN2MWgtM3pNMjcgMjNoMXYxaC0xek0zMCAyM2gxdjFoLTF6TTQgMjRoNXYxaC01ek0xMCAyNGgxdjFoLTF6TTEzIDI0aDF2MWgtMXpNMTUgMjRoM3YxaC0zek0xOSAyNGgzdjFoLTN6TTI0IDI0aDd2MWgtN3pNMTIgMjVoMXYxaC0xek0xNiAyNWgzdjFoLTN6TTIwIDI1aDN2MWgtM3pNMjQgMjVoMXYxaC0xek0yOCAyNWg1djFoLTV6TTQgMjZoN3YxaC03ek0xNCAyNmg0djFoLTR6TTIyIDI2aDN2MWgtM3pNMjYgMjZoMXYxaC0xek0yOCAyNmgydjFoLTJ6TTMxIDI2aDF2MWgtMXpNNCAyN2gxdjFoLTF6TTEwIDI3aDF2MWgtMXpNMTMgMjdoMnYxaC0yek0xOSAyN2gydjFoLTJ6TTIyIDI3aDN2MWgtM3pNMjggMjdoMnYxaC0yek0zMSAyN2gxdjFoLTF6TTQgMjhoMXYxaC0xek02IDI4aDN2MWgtM3pNMTAgMjhoMXYxaC0xek0xMyAyOGgxdjFoLTF6TTE2IDI4aDF2MWgtMXpNMTggMjhoNHYxaC00ek0yNCAyOGg1djFoLTV6TTMwIDI4aDJ2MWgtMnpNNCAyOWgxdjFoLTF6TTYgMjloM3YxaC0zek0xMCAyOWgxdjFoLTF6TTEyIDI5aDF2MWgtMXpNMTQgMjloM3YxaC0zek0xOCAyOWg0djFoLTR6TTI1IDI5aDF2MWgtMXpNMjggMjloMnYxaC0yek0zMiAyOWgxdjFoLTF6TTQgMzBoMXYxaC0xek02IDMwaDN2MWgtM3pNMTAgMzBoMXYxaC0xek0xMiAzMGgydjFoLTJ6TTE1IDMwaDF2MWgtMXpNMTcgMzBoMXYxaC0xek0yMSAzMGgxdjFoLTF6TTI0IDMwaDJ2MWgtMnpNMjcgMzBoMXYxaC0xek0zMCAzMGgxdjFoLTF6TTMyIDMwaDF2MWgtMXpNNCAzMWgxdjFoLTF6TTEwIDMxaDF2MWgtMXpNMTIgMzFoMnYxaC0yek0xNSAzMWgxdjFoLTF6TTE4IDMxaDJ2MWgtMnpNMjIgMzFoMXYxaC0xek0yNCAzMWgydjFoLTJ6TTI3IDMxaDN2MWgtM3pNMzEgMzFoMXYxaC0xek00IDMyaDd2MWgtN3pNMTIgMzJoMXYxaC0xek0xNiAzMmgxdjFoLTF6TTE4IDMyaDF2MWgtMXpNMjIgMzJoM3YxaC0zek0yNiAzMmgxdjFoLTF6TTMxIDMyaDF2MWgtMXoiLz48L3N2Zz4=">
+    <button type="button" class="main" id="qrclose">Kapat</button>
+  </div>
+</div>
 
 <div id="confirm" role="dialog" aria-modal="true" aria-labelledby="ctitle" hidden>
   <div class="sheet">
@@ -471,6 +488,9 @@ $("yes").onclick = async () => {
     if (e.name !== "AbortError") say("Paylaşım açılamadı.");
   }
 };
+$("qrbtn").onclick = () => { $("qrbox").hidden = false; };
+$("qrclose").onclick = () => { $("qrbox").hidden = true; };
+$("qrbox").onclick = e => { if (e.target === $("qrbox")) $("qrbox").hidden = true; };
 </script>
 </body>
 </html>
