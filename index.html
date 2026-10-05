@@ -80,6 +80,8 @@ label[for="q"]{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(
 #qrbtn{width:auto;display:inline-flex;align-items:center;gap:6px;padding:4px 10px;margin-left:6px;font-size:.8rem;font-weight:600;cursor:pointer}
 #qrbtn svg{width:16px;height:16px}
 #qrimg{width:240px;max-width:100%;justify-self:center;border-radius:8px}
+.linkbtn{display:flex;align-items:center;justify-content:center;gap:8px;padding:12px;border:1px solid var(--line);border-radius:10px;background:var(--btn);color:var(--ink);font-weight:600;text-decoration:none}
+.linkbtn svg{width:22px;height:22px;flex:none}
 [hidden]{display:none!important}
 </style>
 </head>
@@ -111,6 +113,7 @@ label[for="q"]{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(
     </dl>
     <p class="hint" id="locshint" hidden>Başka lokasyon seçmek için dokunun:</p>
     <div id="locs" class="chips" hidden></div>
+    <a id="imgsearch" class="linkbtn" href="#" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6"/><path d="M15 15l5 5"/></svg><span>Görseli İnternette Arat</span></a>
     <p class="hint">* ile işaretli alanlar zorunludur.</p>
     <label for="qty">Çekilen Miktar *</label>
     <input id="qty" type="number" inputmode="numeric" min="1">
@@ -136,7 +139,7 @@ label[for="q"]{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(
   </section>
 
   <button type="button" id="resetall">Temizle</button>
-  <p id="info" class="hint">Sürüm 2.0 · Yapımcı: [H.Erdem / Bakım]<button type="button" id="qrbtn"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3.8" y="3.8" width="5.6" height="5.6"/><rect x="14.6" y="3.8" width="5.6" height="5.6"/><rect x="3.8" y="14.6" width="5.6" height="5.6"/></g><rect x="5.6" y="5.6" width="2" height="2"/><rect x="16.4" y="5.6" width="2" height="2"/><rect x="5.6" y="16.4" width="2" height="2"/><rect x="14" y="14" width="2.5" height="2.5"/><rect x="18.5" y="14" width="2.5" height="2.5"/><rect x="14" y="18.5" width="2.5" height="2.5"/><rect x="18.5" y="18.5" width="2.5" height="2.5"/></svg>QR ile Paylaş</button></p>
+  <p id="info" class="hint">Sürüm V2.2 · Yapımcı: [H.Erdem / Bakım]<button type="button" id="qrbtn"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3.8" y="3.8" width="5.6" height="5.6"/><rect x="14.6" y="3.8" width="5.6" height="5.6"/><rect x="3.8" y="14.6" width="5.6" height="5.6"/></g><rect x="5.6" y="5.6" width="2" height="2"/><rect x="16.4" y="5.6" width="2" height="2"/><rect x="5.6" y="16.4" width="2" height="2"/><rect x="14" y="14" width="2.5" height="2.5"/><rect x="18.5" y="14" width="2.5" height="2.5"/><rect x="14" y="18.5" width="2.5" height="2.5"/><rect x="18.5" y="18.5" width="2.5" height="2.5"/></svg>QR ile Paylaş</button></p>
 </main>
 
 <div id="qrbox" role="dialog" aria-modal="true" aria-labelledby="qrtitle" hidden>
@@ -256,6 +259,7 @@ function select(it, loc) {
   $("r-mk").textContent = it.toplam;
   $("r-lk").textContent = loc[0];
   $("r-lm").textContent = loc[1];
+  $("imgsearch").href = "https://www.google.com/search?tbm=isch&q=" + encodeURIComponent(it.aciklama || it.no);
   const cok = it.lok.length > 1;
   $("locshint").hidden = $("locs").hidden = !cok;
   $("locs").innerHTML = "";
