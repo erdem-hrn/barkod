@@ -73,9 +73,10 @@ dt{font-weight:700}dd{margin:0;overflow-wrap:anywhere}
 .chip[aria-pressed="true"]{background:var(--acc);color:var(--accink);border-color:var(--acc)}
 label[for="q"]{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 #q::placeholder{color:var(--ink);opacity:.75;font-weight:600;font-size:min(.95rem,3.4vw)}
-#q{padding-left:10px;padding-right:4px}
-#shotbtn{display:flex;align-items:center;justify-content:center;gap:10px}
-#shotbtn svg{width:24px;height:24px;flex:none}
+#q{padding-left:8px;padding-right:8px;text-align:center}
+#shotbtn{display:flex;align-items:center;gap:6px;padding-left:10px;padding-right:10px}
+#shotbtn span{flex:1;text-align:center;white-space:nowrap;font-size:min(17px,4.3vw)}
+#shotbtn svg{width:22px;height:22px;flex:none}
 #qrbtn{width:auto;display:inline-flex;align-items:center;gap:6px;padding:4px 10px;margin-left:6px;font-size:.8rem;font-weight:600;cursor:pointer}
 #qrbtn svg{width:16px;height:16px}
 #qrimg{width:240px;max-width:100%;justify-self:center;border-radius:8px}
@@ -91,7 +92,7 @@ label[for="q"]{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(
     <button class="main" id="scan"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="2" y="4" width="2" height="16"/><rect x="5.5" y="4" width="1" height="16"/><rect x="8" y="4" width="3" height="16"/><rect x="12.5" y="4" width="1" height="16"/><rect x="15" y="4" width="2" height="16"/><rect x="18.5" y="4" width="1" height="16"/><rect x="21" y="4" width="1" height="16"/></svg><span id="scanlbl">Barkod veya QR okut</span><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3.8" y="3.8" width="5.6" height="5.6"/><rect x="14.6" y="3.8" width="5.6" height="5.6"/><rect x="3.8" y="14.6" width="5.6" height="5.6"/></g><rect x="5.6" y="5.6" width="2" height="2"/><rect x="16.4" y="5.6" width="2" height="2"/><rect x="5.6" y="16.4" width="2" height="2"/><rect x="14" y="14" width="2.5" height="2.5"/><rect x="18.5" y="14" width="2.5" height="2.5"/><rect x="14" y="18.5" width="2.5" height="2.5"/><rect x="18.5" y="18.5" width="2.5" height="2.5"/></svg></button>
     <video id="vid" playsinline muted hidden></video>
     <div id="reader"></div>
-    <button id="shotbtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l1.5-2h7L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13.5" r="3.6"/></svg><span>Fotoğraf çekerek okut</span></button>
+    <button id="shotbtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l1.5-2h7L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13.5" r="3.6"/></svg><span>Fotoğraf çekerek okut</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l1.5-2h7L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13.5" r="3.6"/></svg></button>
     <input id="shot" type="file" accept="image/*" capture="environment" hidden>
     <label for="q">ZZ No / Tip Bilgisi veya Tanım ile Ara</label>
     <input id="q" type="search" autocomplete="off" placeholder="ZZ No / Tip Bilgisi veya Tanım ile Ara">
@@ -135,7 +136,7 @@ label[for="q"]{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(
   </section>
 
   <button type="button" id="resetall">Temizle</button>
-  <p id="info" class="hint">Sürüm 2.1 · Yapımcı: [H.Erdem / Bakım]<button type="button" id="qrbtn"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3.8" y="3.8" width="5.6" height="5.6"/><rect x="14.6" y="3.8" width="5.6" height="5.6"/><rect x="3.8" y="14.6" width="5.6" height="5.6"/></g><rect x="5.6" y="5.6" width="2" height="2"/><rect x="16.4" y="5.6" width="2" height="2"/><rect x="5.6" y="16.4" width="2" height="2"/><rect x="14" y="14" width="2.5" height="2.5"/><rect x="18.5" y="14" width="2.5" height="2.5"/><rect x="14" y="18.5" width="2.5" height="2.5"/><rect x="18.5" y="18.5" width="2.5" height="2.5"/></svg>QR ile Paylaş</button></p>
+  <p id="info" class="hint">Sürüm 2.0 · Yapımcı: [H.Erdem / Bakım]<button type="button" id="qrbtn"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3.8" y="3.8" width="5.6" height="5.6"/><rect x="14.6" y="3.8" width="5.6" height="5.6"/><rect x="3.8" y="14.6" width="5.6" height="5.6"/></g><rect x="5.6" y="5.6" width="2" height="2"/><rect x="16.4" y="5.6" width="2" height="2"/><rect x="5.6" y="16.4" width="2" height="2"/><rect x="14" y="14" width="2.5" height="2.5"/><rect x="18.5" y="14" width="2.5" height="2.5"/><rect x="14" y="18.5" width="2.5" height="2.5"/><rect x="18.5" y="18.5" width="2.5" height="2.5"/></svg>QR ile Paylaş</button></p>
 </main>
 
 <div id="qrbox" role="dialog" aria-modal="true" aria-labelledby="qrtitle" hidden>
