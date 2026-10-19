@@ -136,7 +136,7 @@ label[for="q"]{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(
   </section>
 
   <button type="button" id="resetall">Temizle</button>
-  <p id="info" class="hint">Sürüm 2.1 · Yapımcı: [ H.Erdem / Bakım ]<button type="button" id="qrbtn"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3.8" y="3.8" width="5.6" height="5.6"/><rect x="14.6" y="3.8" width="5.6" height="5.6"/><rect x="3.8" y="14.6" width="5.6" height="5.6"/></g><rect x="5.6" y="5.6" width="2" height="2"/><rect x="16.4" y="5.6" width="2" height="2"/><rect x="5.6" y="16.4" width="2" height="2"/><rect x="14" y="14" width="2.5" height="2.5"/><rect x="18.5" y="14" width="2.5" height="2.5"/><rect x="14" y="18.5" width="2.5" height="2.5"/><rect x="18.5" y="18.5" width="2.5" height="2.5"/></svg>QR ile Paylaş</button></p>
+  <p id="info" class="hint">Sürüm 2.2 · Yapımcı: [ H.Erdem / Bakım ]<button type="button" id="qrbtn"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3.8" y="3.8" width="5.6" height="5.6"/><rect x="14.6" y="3.8" width="5.6" height="5.6"/><rect x="3.8" y="14.6" width="5.6" height="5.6"/></g><rect x="5.6" y="5.6" width="2" height="2"/><rect x="16.4" y="5.6" width="2" height="2"/><rect x="5.6" y="16.4" width="2" height="2"/><rect x="14" y="14" width="2.5" height="2.5"/><rect x="18.5" y="14" width="2.5" height="2.5"/><rect x="14" y="18.5" width="2.5" height="2.5"/><rect x="18.5" y="18.5" width="2.5" height="2.5"/></svg>QR ile Paylaş</button></p>
 </main>
 
 <div id="qrbox" role="dialog" aria-modal="true" aria-labelledby="qrtitle" hidden>
@@ -450,20 +450,32 @@ $("send").onclick = () => {
   ];
   if (note) rows.push(["Ek Açıklama", note]);
 
+  // Mesajın başlığı: başlık + tarih/saat + ayırıcı çizgi (üstte ve altta)
+  const t = new Date(), p2 = n => String(n).padStart(2, "0");
+  const zaman = p2(t.getDate()) + "." + p2(t.getMonth() + 1) + "." + t.getFullYear() + " " + p2(t.getHours()) + ":" + p2(t.getMinutes());
+  const LINE = "━━━━━━━━━━━━━━";
+
+  // Onay penceresindeki önizleme (WhatsApp'ta görünecek hâliyle)
   const body = $("cbody");
   body.innerHTML = "";
-  rows.forEach(r => {
+  const div = (cls, ...nodes) => {
     const d = document.createElement("div");
-    if (r) { const b = document.createElement("b"); b.textContent = r[0] + ":"; d.append(b, " " + r[1]); }
-    else d.className = "gap";
+    if (cls) d.className = cls;
+    d.append(...nodes);
     body.appendChild(d);
-  });
-  if (photoFile) {
-    const d = document.createElement("div");
-    d.className = "hint"; d.textContent = "Parça resmi mesajla birlikte gönderilecek.";
-    body.appendChild(d);
-  }
-  pending = {text: rows.map(r => r ? "*" + r[0] + ":* " + r[1] : "").join("\n"), file: photoFile};
+  };
+  const bold = txt => { const b = document.createElement("b"); b.textContent = txt; return b; };
+  div("", bold("🔧 MALZEME ÇEKİMİ"));
+  div("", "📅 " + zaman);
+  div("", LINE);
+  rows.forEach(r => r ? div("", bold(r[0] + ":"), " " + r[1]) : div("gap"));
+  div("", LINE);
+  if (photoFile) div("hint", "Parça resmi mesajla birlikte gönderilecek.");
+
+  const text = ["🔧 *MALZEME ÇEKİMİ*", "📅 " + zaman, LINE]
+    .concat(rows.map(r => r ? "*" + r[0] + ":* " + r[1] : ""), [LINE])
+    .join("\n");
+  pending = {text, file: photoFile};
   $("confirm").hidden = false;
 };
 
