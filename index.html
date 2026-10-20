@@ -453,7 +453,7 @@ $("send").onclick = () => {
   // Mesajın başlığı: başlık + tarih/saat + ayırıcı çizgi (üstte ve altta)
   const t = new Date(), p2 = n => String(n).padStart(2, "0");
   const zaman = p2(t.getDate()) + "." + p2(t.getMonth() + 1) + "." + t.getFullYear() + " " + p2(t.getHours()) + ":" + p2(t.getMinutes());
-  const LINE = "━━━━━━━━━━━━━━";
+  const LINE = "━━━━━━━━━━━━━━", THIN = "──────────────";
 
   // Onay penceresindeki önizleme (WhatsApp'ta görünecek hâliyle)
   const body = $("cbody");
@@ -465,14 +465,15 @@ $("send").onclick = () => {
     body.appendChild(d);
   };
   const bold = txt => { const b = document.createElement("b"); b.textContent = txt; return b; };
+  div("", LINE);
   div("", bold("🔧 MALZEME ÇEKİMİ"));
   div("", "📅 " + zaman);
-  div("", LINE);
+  div("", THIN);
   rows.forEach(r => r ? div("", bold(r[0] + ":"), " " + r[1]) : div("gap"));
   div("", LINE);
   if (photoFile) div("hint", "Parça resmi mesajla birlikte gönderilecek.");
 
-  const text = ["🔧 *MALZEME ÇEKİMİ*", "📅 " + zaman, LINE]
+  const text = [LINE, "🔧 *MALZEME ÇEKİMİ*", "📅 " + zaman, THIN]
     .concat(rows.map(r => r ? "*" + r[0] + ":* " + r[1] : ""), [LINE])
     .join("\n");
   pending = {text, file: photoFile};
